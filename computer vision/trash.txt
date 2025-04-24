@@ -1,0 +1,67 @@
+import cv2
+import numpy as np
+
+def edited(frame):
+    # Convert the frame to YCrCb for color-based detection
+    frmtd = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
+    
+    # Get trackbar positions for color range
+    l1 = cv2.getTrackbarPos("L1", "Tracking")
+    l2 = cv2.getTrackbarPos("L2", "Tracking")
+    l3 = cv2.getTrackbarPos("L3", "Tracking")
+    u1 = cv2.getTrackbarPos("U1", "Tracking")
+    u2 = cv2.getTrackbarPos("U2", "Tracking")
+    u3 = cv2.getTrackbarPos("U3", "Tracking")
+    
+    lb = np.array([l1, l2, l3])
+    ub = np.array([u1, u2, u3])
+    
+    # Apply Gaussian blur to reduce noise
+    frmtd = cv2.GaussianBlur(frmtd, (7, 7), 10000)
+    
+    # Create a mask for the color range
+    mask = cv2.inRange(frmtd, lb, ub)
+    
+    # Apply the mask to the original frame
+    res = cv2.bitwise_and(frame, frame, mask=mask)
+    
+    # Convert the masked result to grayscale for Hough circles detection
+    gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+    
+    gray = cv2.Canny(gray, 70, 135)
+    
+    cv2.imshow("grayscale edge detection", gray)
+    
+    # Apply Hough circles detection
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.2, 200, param1=200, param2=60, minRadius=1, maxRadius=15)
+    
+    if circles is not None:
+        # Round the circles to the nearest integer
+        circles = np.round(circles[0, :]).astype("int")
+        
+        # Loop over the (x, y) coordinates and radius of the circles
+        for (x, y, r) in circles:
+            # Draw the circle in the result image
+            cv2.circle(res, (x, y), r, (0, 255, 0), 4)
+            
+            # Crop the region of interest (ROI) around the circle
+            roi = res[y-r:y+r, x-r:x+r]
+            
+    return frame
+
+
+
+
+
+
+
+
+
+
+cv2.namedWindow("Tracking")
+cv2.createTrackbar("L1", "Tracking", 0, 255, lambda x: None) #49
+cv2.createTrackbar("L2", "Tracking", 0, 255, lambda x: None) #33
+cv2.createTrackbar("L3", "Tracking", 0, 255, lambda x: None) #39
+cv2.createTrackbar("U1", "Tracking", 255, 255, lambda x: None) #195
+cv2.createTrackbar("U2", "Tracking", 255, 255, lambda x: None) #175
+cv2.createTrackbar("U3", "Tracking", 255, 255, lambda x: None) #121
